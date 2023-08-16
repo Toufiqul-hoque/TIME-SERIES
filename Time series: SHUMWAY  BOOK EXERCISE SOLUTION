@@ -1,0 +1,118 @@
+library(astsa)
+data("cmort")
+
+#3.a
+d<-data.frame(cmort)
+d.yw=ar.yw(cmort, order=2)
+d.yw
+d.yw$x.mean
+d.yw$var.pred
+d.yw$ar
+
+#AR(2) model to Xt using Yule-Walker equations:
+#Xt = 0.4339Xt−1 + 0.4379Xt−2 + Wt
+#Where Wt ∼ WN(0, 32.84)
+
+#3.b
+d.pr = predict(d.yw, n.ahead=4)
+d.pr
+d.pr$pred
+# confidence interval
+lb<-(d.pr$pred-1.96*d.pr$se)
+ub<-(d.pr$pred+1.96*d.pr$se)
+lb
+ub
+
+
+#4
+library(astsa)
+data("birth")
+plot(birth)
+# clearly the series is not stationary cause the mean is not constant.
+acf(birth)
+dbirth<-diff(birth,differences = 1)
+plot(dbirth)
+d2birth<-diff(birth,differences = 2)
+plot(d2birth)
+ts.plot(cbind(birth,dbirth),main="")
+acf(dbirth) #acf decays quickly at the multiple of 12 lags. 
+acf(d2birth)
+dsbirth<-diff(dbirth,differences = 1, lag = 12)
+acf(dsbirth)
+pacf(dsbirth)
+#we can work with the first difference.
+model1<-sarima(birth,1,1,1,1,1,1,12)
+model1
+model2<-sarima(birth,1,1,1,0,1,1,12)
+model2
+# both are the models are competitive according to their AIC BIC so according to the white noise and simplicity we choose the model2(1,1,1,1,1,1,12)
+forecast<-predict(model2$fit,n.ahead=12)
+forecast
+CI_predict<-matrix(nrow = 12,ncol=2)
+colnames(CI_predict)<-c("LL","UL")
+CI_predict[,1]<-forecast$pred-1.96*forecast$se
+CI_predict[,2]<-forecast$pred+1.96*forecast$se
+CI_predict
+
+#2
+data(gas)
+plot(gas) #seems the series is not stationary and the variance is not constant.
+data<-log(gas)
+acf2(data) # acf decaying slowly, so we need to take the first difference.
+ddata<-diff(data,differences=1)
+acf2(ddata)
+tsplot(ddata)# after observing the acf and pacf we have two competitive models.
+model.21<-arima(data,order = c(1,1,1),method = "ML")
+model.21
+model.21$var.coef
+qqnorm(model.21$residuals)
+shapiro.test(model.21$residuals)
+tsdiag(model.21,gof.lag = 10)
+
+model.22<-arima(data,order = c(0,1,1),method = "ML")
+model.22
+model.22$var.coef
+qqnorm(model.22$residuals)
+shapiro.test(model.22$residuals)
+tsdiag(model.21,gof.lag = 10)
+## model arima(1,1,1) jhas slightly low AIC, so we choose this model.
+forecast2<-predict(model.21,n.ahead = 12)
+forecast
+CI2<-matrix(nrow = 12,ncol = 2)
+colnames(CI2)<-c("LL","UL")
+CI2[,1]<-forecast$pred-1.96*forecast$se
+CI2[,2]<-forecast$pred+1.96*forecast$se
+CI2
+
+----------------------------
+library(astsa)
+data("sunspotz")
+plot(sunspotz)
+sun<-spec.pgram(sunspotz,taper = 0,log="no")
+sun$spec
+which.max(sun$spec)
+p<-22/480
+p
+#b
+modified <- kernel("modified.daniell", c(1,2))
+modified
+sun.smooth <- spec.pgram(sunspotz, modified, taper = 0, log = "no")
+#c
+which.max(sun.smooth$spec)
+23/480
+sun.smooth$spec[23]
+
+which.max(sun.smooth$spec[1:15])
+3/480
+
+which.max(sun.smooth$spec[35:240])
+9/480
+###
+s<-spec.ar(sunspotz,log="no")
+est.yw<-ar.yw(sunspotz,order(16),demean = T)
+est.yw
+mean(sunspotz)
+which.max(s$spec)
+s$freq[49]
+1000/49
+#using parametric approach the period is 20.40.
